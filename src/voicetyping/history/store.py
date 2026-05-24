@@ -8,9 +8,11 @@ import uuid
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
+from typing import Callable, Optional
 
 from voicetyping.config.settings import ChineseScript, _config_dir
+
+HistoryChangeCallback = Callable[[str], None]
 
 
 @dataclass
@@ -33,7 +35,27 @@ class HistoryStore:
         self.max_items = max_items
         self._entries: list[HistoryEntry] = []
         self._lock = threading.Lock()
+        self._listeners: list[HistoryChangeCallback] = []
         self._load()
+
+    def add_listener(self, callback: HistoryChangeCallback) -> None:
+        with self._lock:
+            if callback not in self._listeners:
+                self._listeners.append(callback)
+
+    def remove_listener(self, callback: HistoryChangeCallback) -> None:
+        with self._lock:
+            if callback in self._listeners:
+                self._listeners.remove(callback)
+
+    def _notify(self, event: str) -> None:
+        with self._lock:
+            listeners = list(self._listeners)
+        for callback in listeners:
+            try:
+                callback(event)
+            except Exception as exc:
+                print(f"[HistoryStore] Listener error: {exc}")
 
     def _load(self) -> None:
         if not self.path.exists():
@@ -60,6 +82,7 @@ class HistoryStore:
             self._entries.insert(0, entry)
             self._entries = self._entries[: self.max_items]
             self._save()
+        self._notify("add")
         return entry
 
     def get_all(self) -> list[HistoryEntry]:
@@ -70,8 +93,10 @@ class HistoryStore:
         with self._lock:
             self._entries = []
             self._save()
+        self._notify("change")
 
     def delete(self, entry_id: str) -> None:
         with self._lock:
             self._entries = [entry for entry in self._entries if entry.id != entry_id]
             self._save()
+        self._notify("change")

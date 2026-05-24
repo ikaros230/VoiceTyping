@@ -73,12 +73,35 @@ class _HistoryPanel(tk.Toplevel):
 
         self.refresh()
 
-    def refresh(self) -> None:
+    def refresh(self, select_first: bool = False) -> None:
+        selected_id = None
+        if not select_first:
+            entry = self._selected_entry()
+            selected_id = entry.id if entry else None
+
         self._entries = self.history_store.get_all()
         self._listbox.delete(0, tk.END)
-        for entry in self._entries:
+        select_index = None
+        for index, entry in enumerate(self._entries):
             self._listbox.insert(tk.END, self._format_entry(entry))
-        self._set_detail("")
+            if select_first and index == 0:
+                select_index = 0
+            elif selected_id and entry.id == selected_id:
+                select_index = index
+
+        if select_index is not None:
+            self._listbox.selection_set(select_index)
+            self._listbox.see(select_index)
+            self._set_detail(self._entries[select_index].text)
+        else:
+            self._set_detail("")
+
+    @property
+    def is_visible(self) -> bool:
+        try:
+            return self.winfo_exists() and self.winfo_viewable()
+        except tk.TclError:
+            return False
 
     def _format_entry(self, entry: HistoryEntry) -> str:
         try:
@@ -173,9 +196,23 @@ class HistoryWindow:
         root = tk.Tk()
         root.withdraw()
         panel: Optional[_HistoryPanel] = None
+        bound_store: Optional[HistoryStore] = None
+
+        def on_store_change(event: str) -> None:
+            cls._cmd_queue.put(("refresh", event))
+
+        def bind_store(store: HistoryStore) -> None:
+            nonlocal bound_store
+            if bound_store is store:
+                return
+            if bound_store is not None:
+                bound_store.remove_listener(on_store_change)
+            store.add_listener(on_store_change)
+            bound_store = store
 
         def handle_open(store: HistoryStore, on_inject: Optional[Callable[[str], None]]) -> None:
             nonlocal panel
+            bind_store(store)
             if panel is None or not panel.winfo_exists():
                 panel = _HistoryPanel(root, store, on_inject)
             else:
@@ -186,12 +223,19 @@ class HistoryWindow:
             panel.lift()
             panel.focus_force()
 
+        def handle_refresh(event: str) -> None:
+            if panel is None or not panel.is_visible:
+                return
+            panel.refresh(select_first=event == "add")
+
         def poll_queue() -> None:
             try:
                 while True:
                     cmd, *args = cls._cmd_queue.get_nowait()
                     if cmd == "open":
                         handle_open(*args)
+                    elif cmd == "refresh":
+                        handle_refresh(args[0] if args else "change")
             except queue.Empty:
                 pass
             root.after(100, poll_queue)

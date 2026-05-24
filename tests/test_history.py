@@ -59,3 +59,15 @@ def test_history_delete_and_clear():
         store.clear()
         assert store.get_all() == []
         assert json.loads(path.read_text(encoding="utf-8")) == []
+
+
+def test_history_listener_on_add():
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / "history.json"
+        store = HistoryStore(path=path)
+        events: list[str] = []
+        store.add_listener(events.append)
+        store.add("新记录", "simplified")
+        assert events == ["add"]
+        store.delete(store.get_all()[0].id)
+        assert events == ["add", "change"]
