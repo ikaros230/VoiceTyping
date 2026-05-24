@@ -103,3 +103,40 @@ src/voicetyping/
 ## License
 
 MIT
+
+## 打包发布（开发者）
+
+可将 VoiceTyping 打包为 Windows 可执行程序，分发给无需安装 Python 的用户。
+
+### 方式一：绿色版（文件夹）
+
+```powershell
+.\scripts\build.ps1
+```
+
+构建完成后，输出目录为 `dist\VoiceTyping\`，其中 `VoiceTyping.exe` 为程序入口。
+
+可将整个 `VoiceTyping` 文件夹压缩为 zip 发给用户，解压后双击运行即可。
+
+### 方式二：安装包（Setup.exe）
+
+1. 先执行 `.\scripts\build.ps1` 完成构建
+2. 安装 [Inno Setup 6](https://jrsoftware.org/isinfo.php)
+3. 用 Inno Setup 打开 `installer\VoiceTyping.iss` 并编译
+4. 安装包输出在 `installer\output\VoiceTyping-Setup-0.1.0.exe`
+
+### 打包体积说明
+
+| 内容 | 大小 |
+|------|------|
+| 打包后程序（不含模型） | 约 400–600 MB |
+| 首次运行下载 base 模型 | 约 145 MB |
+
+模型不会打入安装包，首次运行自动下载（默认使用国内镜像）。
+
+### 用户使用说明（打包版）
+
+1. 安装或解压后运行 `VoiceTyping.exe`
+2. 首次启动需联网下载语音识别模型
+3. 若全局热键无效，请右键「以管理员身份运行」
+4. 配置与历史记录保存在 `%APPDATA%\VoiceTyping\`

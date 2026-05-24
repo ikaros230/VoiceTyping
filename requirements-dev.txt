@@ -1,0 +1,2 @@
+# Build dependencies (not required for end users)
+pyinstaller>=6.0.0
