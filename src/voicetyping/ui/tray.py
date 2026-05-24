@@ -39,11 +39,13 @@ class TrayApp:
         self,
         get_chinese_script: Callable[[], ChineseScript],
         on_chinese_script_change: Optional[Callable[[ChineseScript], None]] = None,
+        on_open_history: Optional[Callable[[], None]] = None,
         on_quit: Optional[Callable[[], None]] = None,
         on_open_settings: Optional[Callable[[], None]] = None,
     ) -> None:
         self._get_chinese_script = get_chinese_script
         self._on_chinese_script_change = on_chinese_script_change
+        self._on_open_history = on_open_history
         self._on_quit = on_quit
         self._on_open_settings = on_open_settings
         self._icon: Optional[Icon] = None
@@ -66,6 +68,7 @@ class TrayApp:
 
     def _build_menu(self) -> Menu:
         return Menu(
+            MenuItem("历史剪贴板", self._open_history),
             MenuItem(
                 "文字输出",
                 Menu(
@@ -101,6 +104,10 @@ class TrayApp:
             self._icon.menu = self._build_menu()
             self._icon.update_menu()
 
+    def _open_history(self, _icon=None, _item=None) -> None:
+        if self._on_open_history:
+            threading.Thread(target=self._on_open_history, daemon=True).start()
+
     def _open_settings(self) -> None:
         if self._on_open_settings:
             threading.Thread(target=self._on_open_settings, daemon=True).start()
@@ -117,6 +124,7 @@ class TrayApp:
             ICONS[PipelineState.IDLE],
             self._title_for_state(PipelineState.IDLE),
             menu=self._build_menu(),
+            default=self._open_history,
         )
         self._icon.run()
 

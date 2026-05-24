@@ -74,6 +74,22 @@ def test_pipeline_state_transitions():
     assert PipelineState.TRANSCRIBING in states
 
 
+def test_pipeline_transcription_callback():
+    recorder = MagicMock()
+    recorder.start = MagicMock()
+    recorder.stop = MagicMock(return_value=np.zeros(SAMPLE_RATE, dtype=np.float32))
+    engine = MagicMock()
+    engine.transcribe = MagicMock(return_value="保存到历史")
+
+    saved = []
+    pipeline = VoicePipeline(recorder=recorder, engine=engine, min_record_seconds=0.0)
+    pipeline.set_transcription_callback(lambda text: saved.append(text))
+
+    pipeline.start_recording()
+    pipeline.stop_recording_and_transcribe()
+    assert saved == ["保存到历史"]
+
+
 def test_pipeline_short_recording_skipped():
     recorder = MagicMock()
     recorder.start = MagicMock()

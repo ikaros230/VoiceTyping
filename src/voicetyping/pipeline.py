@@ -38,6 +38,7 @@ class VoicePipeline:
         self._state = PipelineState.IDLE
         self._record_start_time: Optional[float] = None
         self._on_state_change: Optional[Callable[[PipelineState], None]] = None
+        self._on_transcription: Optional[Callable[[str], None]] = None
 
     @property
     def state(self) -> PipelineState:
@@ -45,6 +46,13 @@ class VoicePipeline:
 
     def set_state_callback(self, callback: Callable[[PipelineState], None]) -> None:
         self._on_state_change = callback
+
+    def set_transcription_callback(self, callback: Callable[[str], None]) -> None:
+        self._on_transcription = callback
+
+    def _notify_transcription(self, text: str) -> None:
+        if text and self._on_transcription:
+            self._on_transcription(text)
 
     def _set_state(self, state: PipelineState) -> None:
         self._state = state
@@ -78,6 +86,7 @@ class VoicePipeline:
         finally:
             self._set_state(PipelineState.IDLE)
 
+        self._notify_transcription(text)
         return text
 
     def record_and_transcribe(self, duration: float = 5.0) -> str:
@@ -89,6 +98,7 @@ class VoicePipeline:
             text = self._apply_script(self.engine.transcribe(audio))
         finally:
             self._set_state(PipelineState.IDLE)
+        self._notify_transcription(text)
         return text
 
     def record_transcribe_and_inject(self, duration: float = 5.0) -> str:

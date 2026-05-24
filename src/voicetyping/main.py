@@ -8,14 +8,16 @@ import sys
 import threading
 
 from voicetyping.config.settings import ChineseScript, Settings, config_path, load_settings, save_settings
+from voicetyping.history.store import HistoryStore
 from voicetyping.hotkey.listener import HotkeyListener
 from voicetyping.output.windows import WindowsTextInjector
 from voicetyping.pipeline import PipelineState, VoicePipeline
 from voicetyping.stt.whisper_engine import WhisperEngine
+from voicetyping.ui.history_window import HistoryWindow
 from voicetyping.ui.tray import TrayApp
 
 
-def _build_pipeline(settings: Settings) -> VoicePipeline:
+def _build_pipeline(settings: Settings, injector: WindowsTextInjector) -> VoicePipeline:
     engine = WhisperEngine(
         model_size=settings.model_size,
         device=settings.device,
@@ -23,7 +25,6 @@ def _build_pipeline(settings: Settings) -> VoicePipeline:
         hf_endpoint=settings.hf_endpoint,
         model_path=settings.model_path,
     )
-    injector = WindowsTextInjector(restore_clipboard=settings.restore_clipboard)
     return VoicePipeline(
         engine=engine,
         injector=injector,
@@ -42,7 +43,17 @@ def _open_settings_dialog(settings: Settings) -> None:
 
 def run_app(settings: Settings | None = None) -> None:
     settings = settings or load_settings()
-    pipeline = _build_pipeline(settings)
+    injector = WindowsTextInjector(restore_clipboard=settings.restore_clipboard)
+    pipeline = _build_pipeline(settings, injector)
+    history_store = HistoryStore(max_items=settings.history_max_items)
+
+    def on_transcription(text: str) -> None:
+        history_store.add(text, settings.chinese_script)
+
+    pipeline.set_transcription_callback(on_transcription)
+
+    def open_history() -> None:
+        HistoryWindow.open(history_store, on_inject=injector.inject)
 
     def set_chinese_script(script: ChineseScript) -> None:
         settings.chinese_script = script
@@ -54,6 +65,7 @@ def run_app(settings: Settings | None = None) -> None:
     tray = TrayApp(
         get_chinese_script=lambda: settings.chinese_script,
         on_chinese_script_change=set_chinese_script,
+        on_open_history=open_history,
         on_quit=_shutdown,
         on_open_settings=lambda: _open_settings_dialog(settings),
     )
@@ -73,6 +85,7 @@ def run_app(settings: Settings | None = None) -> None:
 
     listener.start()
     print(f"VoiceTyping running. Hotkey: {settings.hotkey}")
+    print("Left-click tray icon to open history clipboard.")
     print("Press Ctrl+C or use tray menu to quit.")
 
     try:
