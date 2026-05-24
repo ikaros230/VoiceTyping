@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+.venv/
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Project artifacts
+test.wav
+*.wav
+!tests/fixtures/*.wav
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Config (local overrides)
+config.local.json
