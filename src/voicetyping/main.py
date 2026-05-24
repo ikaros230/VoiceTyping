@@ -7,7 +7,7 @@ import json
 import sys
 import threading
 
-from voicetyping.config.settings import Settings, config_path, load_settings, save_settings
+from voicetyping.config.settings import ChineseScript, Settings, config_path, load_settings, save_settings
 from voicetyping.hotkey.listener import HotkeyListener
 from voicetyping.output.windows import WindowsTextInjector
 from voicetyping.pipeline import PipelineState, VoicePipeline
@@ -28,6 +28,7 @@ def _build_pipeline(settings: Settings) -> VoicePipeline:
         engine=engine,
         injector=injector,
         min_record_seconds=settings.min_record_seconds,
+        chinese_script=settings.chinese_script,
     )
 
 
@@ -42,7 +43,20 @@ def _open_settings_dialog(settings: Settings) -> None:
 def run_app(settings: Settings | None = None) -> None:
     settings = settings or load_settings()
     pipeline = _build_pipeline(settings)
-    tray = TrayApp(on_quit=_shutdown, on_open_settings=lambda: _open_settings_dialog(settings))
+
+    def set_chinese_script(script: ChineseScript) -> None:
+        settings.chinese_script = script
+        pipeline.chinese_script = script
+        save_settings(settings)
+        label = "简体中文" if script == "simplified" else "繁體中文"
+        print(f"[VoiceTyping] 文字输出已切换为: {label}")
+
+    tray = TrayApp(
+        get_chinese_script=lambda: settings.chinese_script,
+        on_chinese_script_change=set_chinese_script,
+        on_quit=_shutdown,
+        on_open_settings=lambda: _open_settings_dialog(settings),
+    )
 
     listener = HotkeyListener(
         hotkey=settings.hotkey,

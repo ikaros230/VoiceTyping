@@ -10,6 +10,7 @@ from typing import Callable, Optional
 from voicetyping.audio.recorder import AudioRecorder
 from voicetyping.output.base import TextInjector
 from voicetyping.stt.whisper_engine import WhisperEngine
+from voicetyping.text.chinese import ChineseScript, convert_chinese
 
 
 class PipelineState(Enum):
@@ -27,11 +28,13 @@ class VoicePipeline:
         engine: Optional[WhisperEngine] = None,
         injector: Optional[TextInjector] = None,
         min_record_seconds: float = 0.3,
+        chinese_script: ChineseScript = "simplified",
     ) -> None:
         self.recorder = recorder or AudioRecorder()
         self.engine = engine or WhisperEngine()
         self.injector = injector
         self.min_record_seconds = min_record_seconds
+        self.chinese_script = chinese_script
         self._state = PipelineState.IDLE
         self._record_start_time: Optional[float] = None
         self._on_state_change: Optional[Callable[[PipelineState], None]] = None
@@ -47,6 +50,9 @@ class VoicePipeline:
         self._state = state
         if self._on_state_change:
             self._on_state_change(state)
+
+    def _apply_script(self, text: str) -> str:
+        return convert_chinese(text, self.chinese_script)
 
     def start_recording(self) -> None:
         if self._state != PipelineState.IDLE:
@@ -68,7 +74,7 @@ class VoicePipeline:
 
         self._set_state(PipelineState.TRANSCRIBING)
         try:
-            text = self.engine.transcribe(audio)
+            text = self._apply_script(self.engine.transcribe(audio))
         finally:
             self._set_state(PipelineState.IDLE)
 
@@ -80,7 +86,7 @@ class VoicePipeline:
         audio = self.recorder.record_for(duration)
         self._set_state(PipelineState.TRANSCRIBING)
         try:
-            text = self.engine.transcribe(audio)
+            text = self._apply_script(self.engine.transcribe(audio))
         finally:
             self._set_state(PipelineState.IDLE)
         return text

@@ -10,11 +10,13 @@ from typing import Literal, Optional
 from pydantic import BaseModel, Field
 
 ModelSize = Literal["tiny", "base", "small", "medium", "large-v2", "large-v3"]
+ChineseScript = Literal["simplified", "traditional"]
 
 
 class Settings(BaseModel):
     model_size: ModelSize = "base"
     language: str = "zh"
+    chinese_script: ChineseScript = "simplified"
     hotkey: str = "ctrl+shift+space"
     restore_clipboard: bool = True
     device: str = "auto"

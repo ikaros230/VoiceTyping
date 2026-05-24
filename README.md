@@ -38,6 +38,7 @@ python -m voicetyping.main
 2. 在任意文本框中点击，将光标定位到输入位置
 3. 按住 `Ctrl+Shift+Space` 开始录音
 4. 说话完毕后松开快捷键，识别结果自动插入光标处
+5. 右键托盘图标 → **文字输出**，可切换 **简体中文** / **繁體中文**
 
 > **注意**：全局快捷键功能可能需要以管理员身份运行。若热键无效，请右键「以管理员身份运行」。
 
@@ -51,6 +52,7 @@ python -m voicetyping.main
 | `hf_endpoint` | HuggingFace 镜像地址（国内用户推荐️保留） | `https://hf-mirror.com` |
 | `model_path` | 本地模型目录（设置后忽略 model_size） | `null` |
 | `language` | 识别语言 | `zh` |
+| `chinese_script` | 输出文字（`simplified` 简体 / `traditional` 繁体） | `simplified` |
 | `hotkey` | 全局快捷键 | `ctrl+shift+space` |
 | `restore_clipboard` | 插入后是否恢复原剪贴板内容 | `true` |
 

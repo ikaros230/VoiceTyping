@@ -14,10 +14,14 @@ from voicetyping.output.windows import WindowsTextInjector
 from voicetyping.pipeline import PipelineState, VoicePipeline
 
 
+from voicetyping.text.chinese import convert_chinese
+
+
 def test_settings_defaults():
     settings = Settings()
     assert settings.model_size == "base"
     assert settings.language == "zh"
+    assert settings.chinese_script == "simplified"
     assert settings.hotkey == "ctrl+shift+space"
     assert settings.restore_clipboard is True
 
@@ -96,3 +100,29 @@ def test_windows_injector_pastes_text():
         injector.inject("测试")
         mock_copy.assert_called_once_with("测试")
         mock_send.assert_called_once_with("ctrl+v")
+
+
+def test_convert_chinese_to_traditional():
+    assert convert_chinese("软件", "traditional") == "軟件"
+
+
+def test_convert_chinese_to_simplified():
+    assert convert_chinese("軟件", "simplified") == "软件"
+
+
+def test_pipeline_applies_traditional_script():
+    recorder = MagicMock()
+    recorder.start = MagicMock()
+    recorder.stop = MagicMock(return_value=np.zeros(SAMPLE_RATE, dtype=np.float32))
+    engine = MagicMock()
+    engine.transcribe = MagicMock(return_value="软件")
+
+    pipeline = VoicePipeline(
+        recorder=recorder,
+        engine=engine,
+        min_record_seconds=0.0,
+        chinese_script="traditional",
+    )
+    pipeline.start_recording()
+    text = pipeline.stop_recording_and_transcribe()
+    assert text == "軟件"
