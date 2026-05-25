@@ -26,6 +26,8 @@ class Settings(BaseModel):
     # Optional local model directory; overrides model_size when set
     model_path: Optional[str] = None
     history_max_items: int = Field(default=100, ge=10, le=1000)
+    # None = system default microphone
+    input_device: Optional[int] = None
 
 
 def _config_dir() -> Path:

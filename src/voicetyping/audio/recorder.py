@@ -16,8 +16,9 @@ DTYPE = "float32"
 class AudioRecorder:
     """Records audio from the default microphone at 16 kHz mono."""
 
-    def __init__(self, sample_rate: int = SAMPLE_RATE) -> None:
+    def __init__(self, sample_rate: int = SAMPLE_RATE, device: Optional[int] = None) -> None:
         self.sample_rate = sample_rate
+        self.device = device
         self._frames: list[np.ndarray] = []
         self._stream: Optional[sd.InputStream] = None
         self._lock = threading.Lock()
@@ -26,6 +27,13 @@ class AudioRecorder:
     @property
     def is_recording(self) -> bool:
         return self._recording
+
+    def set_device(self, device: Optional[int]) -> bool:
+        """Change input device. Returns False if currently recording."""
+        if self._recording:
+            return False
+        self.device = device
+        return True
 
     def _callback(self, indata: np.ndarray, _frames: int, _time, status) -> None:
         if status:
@@ -42,12 +50,16 @@ class AudioRecorder:
             self._frames = []
             self._recording = True
 
-        self._stream = sd.InputStream(
-            samplerate=self.sample_rate,
-            channels=CHANNELS,
-            dtype=DTYPE,
-            callback=self._callback,
-        )
+        stream_kwargs = {
+            "samplerate": self.sample_rate,
+            "channels": CHANNELS,
+            "dtype": DTYPE,
+            "callback": self._callback,
+        }
+        if self.device is not None:
+            stream_kwargs["device"] = self.device
+
+        self._stream = sd.InputStream(**stream_kwargs)
         self._stream.start()
 
     def stop(self) -> np.ndarray:

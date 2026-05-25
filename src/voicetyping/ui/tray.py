@@ -8,7 +8,9 @@ from typing import Callable, Optional
 from PIL import Image, ImageDraw
 from pystray import Icon, Menu, MenuItem
 
+from voicetyping.audio.devices import get_device_label
 from voicetyping.config.settings import ChineseScript
+from voicetyping.hotkey.utils import format_hotkey
 from voicetyping.pipeline import PipelineState
 
 SCRIPT_LABELS = {
@@ -38,13 +40,21 @@ class TrayApp:
     def __init__(
         self,
         get_chinese_script: Callable[[], ChineseScript],
+        get_hotkey: Callable[[], str],
+        get_input_device: Callable[[], Optional[int]],
         on_chinese_script_change: Optional[Callable[[ChineseScript], None]] = None,
+        on_change_hotkey: Optional[Callable[[], None]] = None,
+        on_select_microphone: Optional[Callable[[], None]] = None,
         on_open_history: Optional[Callable[[], None]] = None,
         on_quit: Optional[Callable[[], None]] = None,
         on_open_settings: Optional[Callable[[], None]] = None,
     ) -> None:
         self._get_chinese_script = get_chinese_script
+        self._get_hotkey = get_hotkey
+        self._get_input_device = get_input_device
         self._on_chinese_script_change = on_chinese_script_change
+        self._on_change_hotkey = on_change_hotkey
+        self._on_select_microphone = on_select_microphone
         self._on_open_history = on_open_history
         self._on_quit = on_quit
         self._on_open_settings = on_open_settings
@@ -86,6 +96,8 @@ class TrayApp:
                     ),
                 ),
             ),
+            MenuItem(f"修改热键 ({format_hotkey(self._get_hotkey())})", self._change_hotkey),
+            MenuItem(self._mic_menu_label(), self._select_microphone),
             MenuItem("设置", self._open_settings),
             MenuItem("退出", self._quit),
         )
@@ -98,6 +110,20 @@ class TrayApp:
         self.refresh_menu()
         if self._icon and self._state == PipelineState.IDLE:
             self._icon.title = self._title_for_state(PipelineState.IDLE)
+
+    def _mic_menu_label(self) -> str:
+        label = get_device_label(self._get_input_device())
+        if len(label) > 24:
+            label = label[:24] + "..."
+        return f"选择麦克风 ({label})"
+
+    def _select_microphone(self) -> None:
+        if self._on_select_microphone:
+            threading.Thread(target=self._on_select_microphone, daemon=True).start()
+
+    def _change_hotkey(self) -> None:
+        if self._on_change_hotkey:
+            threading.Thread(target=self._on_change_hotkey, daemon=True).start()
 
     def refresh_menu(self) -> None:
         if self._icon:

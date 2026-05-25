@@ -22,6 +22,11 @@ class HotkeyListener:
         self._active = False
         self._hook = None
 
+    def set_hotkey(self, hotkey: str) -> None:
+        """Update the active hotkey without restarting the hook."""
+        self._active = False
+        self.hotkey = hotkey
+
     def start(self) -> None:
         self._hook = keyboard.hook(self._handle_event, suppress=False)
 

@@ -62,6 +62,10 @@ class VoicePipeline:
     def _apply_script(self, text: str) -> str:
         return convert_chinese(text, self.chinese_script)
 
+    def set_input_device(self, device: Optional[int]) -> bool:
+        """Update microphone device. Returns False if recording is active."""
+        return self.recorder.set_device(device)
+
     def start_recording(self) -> None:
         if self._state != PipelineState.IDLE:
             return

@@ -32,14 +32,23 @@ class _HistoryPanel(tk.Toplevel):
         self.history_store = history_store
         self.on_inject = on_inject
         self._entries: list[HistoryEntry] = []
+        self._search_query = tk.StringVar(value="")
+        self._search_query.trace_add("write", lambda *_: self.refresh())
 
         self.title("VoiceTyping 历史剪贴板")
-        self.geometry("640x420")
-        self.minsize(480, 320)
+        self.geometry("640x460")
+        self.minsize(480, 360)
         self.protocol("WM_DELETE_WINDOW", self.withdraw)
 
         header = ttk.Label(self, text="语音转换历史记录", padding=(12, 8))
         header.pack(fill="x")
+
+        search_frame = ttk.Frame(self, padding=(12, 0, 12, 8))
+        search_frame.pack(fill="x")
+        ttk.Label(search_frame, text="搜索：").pack(side="left")
+        search_entry = ttk.Entry(search_frame, textvariable=self._search_query)
+        search_entry.pack(side="left", fill="x", expand=True, padx=(4, 8))
+        ttk.Button(search_frame, text="清除", command=self._clear_search).pack(side="left")
 
         body = ttk.Panedwindow(self, orient=tk.VERTICAL)
         body.pack(fill="both", expand=True, padx=12, pady=(0, 8))
@@ -73,13 +82,17 @@ class _HistoryPanel(tk.Toplevel):
 
         self.refresh()
 
+    def _clear_search(self) -> None:
+        self._search_query.set("")
+
     def refresh(self, select_first: bool = False) -> None:
         selected_id = None
         if not select_first:
             entry = self._selected_entry()
             selected_id = entry.id if entry else None
 
-        self._entries = self.history_store.get_all()
+        query = self._search_query.get()
+        self._entries = self.history_store.search(query)
         self._listbox.delete(0, tk.END)
         select_index = None
         for index, entry in enumerate(self._entries):

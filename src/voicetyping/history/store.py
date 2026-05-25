@@ -89,6 +89,14 @@ class HistoryStore:
         with self._lock:
             return list(self._entries)
 
+    def search(self, query: str) -> list[HistoryEntry]:
+        """Return entries whose text contains the query (case-insensitive)."""
+        normalized = query.strip().lower()
+        with self._lock:
+            if not normalized:
+                return list(self._entries)
+            return [entry for entry in self._entries if normalized in entry.text.lower()]
+
     def clear(self) -> None:
         with self._lock:
             self._entries = []
