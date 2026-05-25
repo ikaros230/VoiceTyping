@@ -6,7 +6,7 @@
 
 **VoiceTyping** 是一款 Windows 本地语音输入法。按住全局快捷键说话，松开后自动将识别文字插入任意应用的光标处。基于 faster-whisper 本地推理，**零 API 成本、可离线使用、数据不出本机**。
 
-
+演示视频：【语音输入法演示视频】 https://www.bilibili.com/video/BV133Go6LEFi/?share_source=copy_web&vd_source=1cf1d23c2dfe02a94695137bfda3adca
 ---
 
 ## 特性一览
