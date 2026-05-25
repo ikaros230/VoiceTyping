@@ -67,11 +67,18 @@ class TrayApp:
             self._icon.icon = ICONS.get(state, ICONS[PipelineState.IDLE])
             self._icon.title = self._title_for_state(state)
 
+    def notify(self, title: str, message: str) -> None:
+        if self._icon:
+            try:
+                self._icon.notify(message, title)
+            except Exception as exc:
+                print(f"[TrayApp] Notification failed: {exc}")
+
     def _title_for_state(self, state: PipelineState) -> str:
         script_label = SCRIPT_LABELS[self._get_chinese_script()]
         titles = {
             PipelineState.IDLE: f"VoiceTyping — 就绪 ({script_label})",
-            PipelineState.RECORDING: "VoiceTyping — 录音中",
+            PipelineState.RECORDING: "VoiceTyping — 🎤 麦克风使用中",
             PipelineState.TRANSCRIBING: "VoiceTyping — 识别中",
         }
         return titles.get(state, "VoiceTyping")

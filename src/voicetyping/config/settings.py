@@ -28,6 +28,8 @@ class Settings(BaseModel):
     history_max_items: int = Field(default=100, ge=10, le=1000)
     # None = system default microphone
     input_device: Optional[int] = None
+    low_volume_rms_threshold: float = Field(default=0.015, ge=0.001, le=0.2)
+    show_recording_indicator: bool = True
 
 
 def _config_dir() -> Path:

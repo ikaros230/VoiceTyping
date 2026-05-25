@@ -6,6 +6,7 @@ import argparse
 import json
 import sys
 import threading
+import time
 
 from voicetyping.audio.devices import get_device_label
 from voicetyping.audio.recorder import AudioRecorder
@@ -19,6 +20,7 @@ from voicetyping.hotkey.utils import format_hotkey
 from voicetyping.ui.hotkey_dialog import HotkeyDialog
 from voicetyping.ui.history_window import HistoryWindow
 from voicetyping.ui.mic_dialog import MicDialog
+from voicetyping.ui.recording_indicator import RecordingIndicator
 from voicetyping.ui.tray import TrayApp
 
 
@@ -37,6 +39,7 @@ def _build_pipeline(settings: Settings, injector: WindowsTextInjector) -> VoiceP
         injector=injector,
         min_record_seconds=settings.min_record_seconds,
         chinese_script=settings.chinese_script,
+        low_volume_rms=settings.low_volume_rms_threshold,
     )
 
 
@@ -114,10 +117,42 @@ def run_app(settings: Settings | None = None) -> None:
         on_open_settings=lambda: _open_settings_dialog(settings),
     )
 
+    low_volume_pending = {"flag": False}
+
     def on_state_change(state: PipelineState) -> None:
         tray.update_state(state)
+        if not settings.show_recording_indicator:
+            return
+        if state == PipelineState.RECORDING:
+            low_volume_pending["flag"] = False
+            RecordingIndicator.show()
+        elif state == PipelineState.TRANSCRIBING:
+            if low_volume_pending["flag"]:
+                low_volume_pending["flag"] = False
+
+                def delayed_hide() -> None:
+                    time.sleep(2.0)
+                    RecordingIndicator.hide()
+
+                threading.Thread(target=delayed_hide, daemon=True, name="IndicatorHide").start()
+            else:
+                RecordingIndicator.hide()
+        elif state == PipelineState.IDLE:
+            RecordingIndicator.hide()
+
+    def on_level_update(level: float) -> None:
+        if settings.show_recording_indicator:
+            RecordingIndicator.update_level(level)
+
+    def on_low_volume(_info) -> None:
+        low_volume_pending["flag"] = True
+        if settings.show_recording_indicator:
+            RecordingIndicator.show_low_volume_warning()
+        tray.notify("VoiceTyping", "音量过小，请靠近麦克风或调高系统输入音量。")
 
     pipeline.set_state_callback(on_state_change)
+    pipeline.set_level_callback(on_level_update)
+    pipeline.set_low_volume_callback(on_low_volume)
 
     threading.Thread(target=pipeline.engine.warmup, daemon=True).start()
 

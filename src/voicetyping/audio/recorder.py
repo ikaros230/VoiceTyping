@@ -23,6 +23,23 @@ class AudioRecorder:
         self._stream: Optional[sd.InputStream] = None
         self._lock = threading.Lock()
         self._recording = False
+        self._current_level = 0.0
+        self._peak_level = 0.0
+
+    @property
+    def current_level(self) -> float:
+        with self._lock:
+            return self._current_level
+
+    @property
+    def peak_level(self) -> float:
+        with self._lock:
+            return self._peak_level
+
+    def reset_levels(self) -> None:
+        with self._lock:
+            self._current_level = 0.0
+            self._peak_level = 0.0
 
     @property
     def is_recording(self) -> bool:
@@ -38,6 +55,13 @@ class AudioRecorder:
     def _callback(self, indata: np.ndarray, _frames: int, _time, status) -> None:
         if status:
             print(f"[AudioRecorder] {status}")
+        chunk = indata.flatten()
+        if chunk.size:
+            rms = float(np.sqrt(np.mean(np.square(chunk))))
+            peak = float(np.max(np.abs(chunk)))
+            with self._lock:
+                self._current_level = rms
+                self._peak_level = max(self._peak_level, peak)
         with self._lock:
             if self._recording:
                 self._frames.append(indata.copy())
@@ -49,6 +73,8 @@ class AudioRecorder:
                 return
             self._frames = []
             self._recording = True
+            self._current_level = 0.0
+            self._peak_level = 0.0
 
         stream_kwargs = {
             "samplerate": self.sample_rate,
